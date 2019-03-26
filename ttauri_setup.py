@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import random
-from math import sqrt
+import math as m
 from threading import Thread
 
 #p1 = threading.Thread(target=taskA, args=(*args, **kwargs))
@@ -45,42 +45,70 @@ class Grid():
 
 class Ttauri(Grid):
     def __init__(self):
+        stellarRadius = 695510 #km
+        AU = 149597870.7 #km
+        solarMass = 1.989e30
+
         self.ttaurimag = True            #! with a magnetosphere
-        self.ttaurirstar = 2.         #! radius of the star (must be the same as radius1)
-        self.ttaurimstar = 0.5        #! mass of the star
-        self.ttauririnner = 2.2       #! inner radius of magnetosphere (in stellar radii)
-        self.holeradius = 2.2         #! put a geometrically thin, optically thick disc in the midplane
-        self.ttaurirouter = 3.0        #! outer radius of magnetosphere
-        self.dipoleoffset = 0.0       #! no dipole offset (can't do anything else in 2d)
-        self.usehartmanntemp = True      #! use Hartmann's temperature distribution
+        #self.usehartmanntemp = True      #! use Hartmann's temperature distribution
+
+        self.ttauriRstar = 2.0 * stellarRadius / AU         #! radius of the star (solar radii)
+        self.ttauriMstar = 0.5 * solarMass                        #! mass of the star
+        self.ttauriRinner = 2.2 * self.ttauriRstar       #! inner radius of magnetosphere (in stellar radii)
+        self.holeRadius = 2.2 * self.ttauriRstar         #! put a geometrically thin, optically thick disc in the midplane
+        self.ttauriRouter = 3.0 * self.ttauriRstar       #! outer radius of magnetosphere
+        self.dipoleOffset = 0.0
         self.mdotpar = 1.0e-8
 
-
-        self.gridSize = 75 #au
-        self.resolution = 5 #au
+        self.gridSize = 1 #au
+        self.resolution = 0.01 #au
         Grid.__init__(self,self.gridSize,self.resolution)
         print("Number of cells =", self.nCells)
 
 
     def createSource(self):
+        thisRho = self.ttauriMstar / (1.333*m.pi*self.ttauriRstar**3)
+        data = np.zeros((self.nCells,3))
+        count = 0
+
         for cell in np.ndindex(self.rho.shape):
-            pass
-            Ttauri.modulus(self,cell)
-            #print(cell,self.rho[cell])
+            r = Ttauri.modulus(self,cell)
+            data[count,0] = self.pos[cell+(0,)]
+            data[count,1] = self.pos[cell+(2,)]
+            if(r <= self.ttauriRstar):
+                self.source[cell] = True
+                self.rho[cell] = thisRho
+                self.temp[cell] = 40000.
+                data[count,2] = thisRho
+            count += 1
+        return (self.pos,self.rho)
+
 
 
     def modulus(self,cell):
         r = 0.0
         for i in range(3):
             r += self.pos[cell+(i,)]**2
-        r = sqrt(r)
+        return m.sqrt(r)
 
 
 
 
-x = Ttauri().createSource()
+pos,rho = Ttauri().createSource()
 
+x=pos[:,0,5,0]
+y=pos[0,:,5,0]
+z=rho[:,:,5]
+
+plt.imshow(rho[:,:,50])
+
+# plt.scatter(x,y,c=z)
+plt.show()
+# x = pos[:,0,0,0]
+# y = pos[:,0,0,1]
+# z = pos[:,0,0,2]
+# print(rho)
 # fig=plt.figure()
 # ax=fig.add_subplot(111,projection='3d')
-# ax.scatter(x[:,0],x[:,1],x[:,2])
+# ax.scatter(x,y,z)
 # plt.show()
